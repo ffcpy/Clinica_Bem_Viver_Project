@@ -1,5 +1,77 @@
 from datetime import datetime 
 import json
+import reportlab
+from reportlab.platypus import SimplesDocTemplate, Paragraph, Spacer
+from reportlab.lib.styles import getSampleStyleSheet
+
+
+#-------------PDF CREATION-----------------
+def pdf_creat(anamnese):
+    nome = anamnese["Identificacao"]["Nome"]
+    nome_arquivo = nome.replace(" ", "_").lower() + ".pdf"
+
+    doc = SimplesDocTemplate(nome_arquivo)
+    styles = getSampleStyleSheet()
+
+    elementos = []
+
+    def add_titulo(texto):
+        elementos.append(Paragraph(f"<b>{texto}<b>", styles["Heading2"]))
+        elementos.append(Spacer(1, 10))
+
+    def add_texto(texto):
+        elementos.append(Paragraph(texto, styles["Normal"]))
+        elementos.append(Spacer(1, 8))
+
+        #_______ ID_________
+    add_titulo("1. IDENTIFICAÇÃO")
+    for k, v in anamnese["Identificacao"].items():
+        add_texto(f"{k}: {v}")
+
+        #------------ RESPONSAVEIS _______
+        add_titulo("2. RESPONSÁVEIS")
+        for k, v in anamnese["Responsaveis"]:
+            add_texto(f"{k}: {v}")
+
+            #.  ESOLA -------------
+        add_titulo("3. DADOS ESCOLARES")
+        for k, v in anamnese["Dados_Escolares"].items():
+            add_texto(f"{k}: {v}")
+
+            #.  DIAGNOSTICO -------------
+
+        add_titulo("4. DIAGNÓSTICO")
+        for k, v in anamnese["Diagnostico"].items():
+            if isinstance(v, dict):
+                add_texto(f"{k}:")
+                for subk, subv in v.items():
+                    add_texto(f" - {subk}: {subv}")
+            else:
+                add_texto(f"{k}: {v}")
+
+
+            #    COMUNICACAO ---------------
+
+        add_titulo("5. COMUNICAÇÃO E LINGUAGEM")
+        for k, v in anamnese["Comunicacao_e_Linguagem"]:
+            add_texto(f"{k}: {v}")
+
+
+            #.   COMPORTAMENTO  --------------
+
+        add_titulo("6. COMPORTAMENTO")
+        for k, v in anamnese["Interacao_social_e_comportament"]:
+            add_texto(f"{k}: {v}")
+
+
+            #    FINALIZACAO -------------
+
+        add_titulo("FINALIZACÃO")
+        for k, v in anamnese["finalizacao"]:
+            add_texto(f"{k}: {v}")
+                      
+        doc.build(elementos)
+        print(f"PDF Gerado: {nome_arquivo}")                
 
 
 def anamnese_create():
@@ -34,12 +106,12 @@ def anamnese_create():
         "Atividades_e_Trabalho_dos_Pais" : {},
         "Objetivos_e_Expectativas": {},
         "Observacoes": {},
-        "encaminhamento" : {},
-        "finalizacao" : {}
+        "Encaminhamento" : {},
+        "Finalizacao" : {}
 
     }
 
-anamnese = anamnese_create
+anamnese = anamnese_create()
 
 
 #-----------EVERTHING OK, BUT I HAVE SOME BUGS --------------#
@@ -291,6 +363,9 @@ def diagnostic(anamnese):
                     print("Digite 1 ou 2")
             except:
                 print("Digite um Número válido.")
+    medication_name = None
+    medication_dose = None
+    medication_time = None 
     if  medication == 1:
         while True:
                 medication_name = input("Nome:\n")
@@ -319,6 +394,7 @@ def diagnostic(anamnese):
                 break
         except:
             print("Campo Obrigatório.")
+    allergy1 = None
     if allergy == 1:
         while True:
             allergy1 = input("Quais?:\n")
@@ -344,6 +420,7 @@ def diagnostic(anamnese):
                 print("Digite um Número válido.")
         except:
             print("Campo Obrigatório.")
+    health1 = None
     if health == 1:
         while True:
             health1 = input("Quais?\n")
@@ -504,7 +581,7 @@ def psiqui(anamnese):
     psiqui3 = obrigatory_question("Qual o diagnóstico atual e há quanto tempo foi estabelecido?\n")
     psiqui4 = obrigatory_question("Como e com que frequência o(a) paciente é acompanhado (retornos, ajustes)")
     
-    anamnese["Psiquiatra"] = {
+    anamnese["Atendimentos_atuais"]["Psiquiatra"] = {
         "Nome" : psiqui_name,
         "Contato" : psiqui_tel,
         "Diagnostico_e_tempo" : psiqui3,
@@ -587,7 +664,7 @@ def t_o(anamnese):
     nutri(anamnese)
 def nutri(anamnese):
     print("--------------------------------------------")
-    nutri_name = obrigatory_question("NUTRICIONISTAL\n(1) - Nome:\n")
+    nutri_name = obrigatory_question("NUTRICIONISTA\n(1) - Nome:\n")
     nutri_tel = int_question("(2) - Contato\n")
     
     anamnese["Nutricionista"] = {
@@ -628,7 +705,7 @@ def a_t(anamnese):
     a_t_name = obrigatory_question("ACOMPANHANTE TERAPÊUTICO\n(1) - Nome:\n")
     a_t_tel = int_question("(2) - Contato\n")
    
-    anamnese["Acompanhnate_Terapuetica"] = {
+    anamnese["Acompanhante_Terapeutica"] = {
         "Nome" : a_t_name,
         "Contato" : a_t_tel
         
@@ -659,7 +736,7 @@ def ling_and_comunic(anamnese):
     question21 = question_sn("O vocabulário é adequado à idade?\n")
     question22 = question_sn("A fala é compreensível para outras pessoas?\n")
     
-    anamnese["Comunicacao_e_linguagem"] = {
+    anamnese["Comunicacao_e_Linguagem"] = {
         "Atraso_linguagem" : question17,
         "Como_comunica" : question18,
         "Ecolalia" : question19,
@@ -776,6 +853,8 @@ def higyene(anamnese):
     print("--------------------------------------------")
     question50 = obrigatory_question("Nível de autonomia em higiene (trocar roupa, escovar dente, banheiro):\n")
     question51 = question_sn("Enurese / encoprese (sim/não; frequência):\n")
+    
+    question51_1 = None 
     if question51 in ["S", "SIM"]:
         question51_1 = obrigatory_question("Frequência")
     
@@ -796,7 +875,7 @@ def family_hist(anamnese):
     question54 = obrigatory_question("Relacao entre os pais/responsaveis:\n")
     question55 = obrigatory_question("Relação com avós e presença de rede de apoio (quem ajuda, frequência):\n")
 
-    anamnese["Historico_familiar"] = {
+    anamnese["Historico_Familiar"] = {
         "antecedentes_fam" : question52,
         "quem_mora" : question53,
         "rel_pais" : question54,
@@ -895,6 +974,9 @@ def sug_enc(anamnese):
     print("SUGESTAO DE ENCAMINHAMENTO INICIAL")
     print("--------------------------------------------")
     psicologia = question_sn("Encaminhar para Psicologia: (S/N)\n")
+
+    psicoterapia = None
+    aba = None
     if psicologia in ["S", "SIM"]:
         psicoterapia = question_sn("Psicoterapia? (S/N)\n")
         aba = question_sn("ABA (Análise do Comportamento)? (S/N)\n")
@@ -940,13 +1022,15 @@ def finish(anamnese):
     save_tksgod(anamnese)
 
 def save_tksgod(anamnese): 
-    nome = anamnese ["identificacao"]["nome"]
+    nome = anamnese ["identificacao"]["Nome"]
     nome_arquivo = nome.replace(" ", "_").lower()
 
     with open(f"{nome_arquivo}.json", "w", encoding = "utf-8") as arquivo:
         json.dump(anamnese, arquivo, indent = 4, ensure_ascii = False)
 
         print(f"Salvo como: {nome_arquivo}.json")
+
+    pdf_creat(anamnese)
 
 
 #DESCOBRI O FOGO E MINHA VIDA ESTA 10000X MAIS FACIL COM ESSAs FUNC
